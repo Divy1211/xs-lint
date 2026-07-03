@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crate::parsing::ast::{Expr, Literal, Type};
 use crate::parsing::span::Spanned;
 use crate::r#static::info::{IdInfo, TypeEnv, WarningKind, XsError};
+use crate::r#static::type_check::arg_selection_defects::warn_arg_selection_defects;
 use crate::r#static::type_check::util::{arith_op, logical_op, reln_op, chk_int_lit, chk_num_lit, type_cmp, get_broken_path_name};
 
 pub fn xs_tc_expr(
@@ -83,31 +84,14 @@ pub fn xs_tc_expr(
                 return None;
             },
         };
-        for ((param_name, param_type), arg_expr) in type_sign[..type_sign.len()-1].iter().zip(args) {
+        for ((_param_name, param_type), arg_expr) in type_sign[..type_sign.len()-1].iter().zip(args) {
             let Some(arg_type) = xs_tc_expr(path, arg_expr, type_env) else {
                 // expr will generate its own error if the type cannot be inferred
                 continue;
             };
-            if let (Expr::Identifier(arg_name), arg_span) = arg_expr && arg_name.0.len() > 1 { 'arg_name_check: {
-                if arg_name.0.to_ascii_lowercase().contains(&param_name.0.to_ascii_lowercase()) {
-                    break 'arg_name_check;
-                }
-                for (param_name, _param_type) in type_sign[..type_sign.len()-1].iter() {
-                    if param_name.0.len() <= 1 {
-                        continue;
-                    }
-                    if arg_name.0.to_ascii_lowercase().contains(&param_name.0.to_ascii_lowercase()) {
-                        type_env.add_err(path, XsError::warning(
-                            arg_span,
-                            "This argument is potentially being passed to the wrong parameter",
-                            vec![],
-                            WarningKind::SwappedParams,
-                        ));
-                    }
-                }
-            }}
             type_env.add_errs(path, type_cmp(param_type, &arg_type, &arg_expr.1, true, false, doc.is_no_num_promo()));
         }
+        warn_arg_selection_defects(path, name, name_span, &type_sign[..type_sign.len() - 1], args, type_env);
         if args.len() >= type_sign.len() {
             for (_expr, span) in args[type_sign.len() - 1..].iter() {
                 type_env.add_err(path, XsError::extra_arg(

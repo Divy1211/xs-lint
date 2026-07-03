@@ -35,6 +35,14 @@ impl Type {
             _             => panic!("Non type token cannot be converted to type!"),
         }
     }
+    
+    pub fn accepts(&self, other: &Self) -> bool {
+        match (self, other) {
+            (left, right) if left == right => true,
+            (Type::Int | Type::Float, Type::Int | Type::Float | Type::Bool) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Display for Type {

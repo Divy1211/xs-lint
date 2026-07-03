@@ -3,6 +3,7 @@ use tower_lsp::lsp_types::{InlayHint, InlayHintLabel, InlayHintTooltip, MarkupCo
 use xsc_core::parsing::ast::{AstNode, Expr, Type};
 use xsc_core::parsing::span::Spanned;
 use xsc_core::r#static::info::{IdInfo, TypeEnv};
+use xsc_core::r#static::type_check::{dist, get_arg_name, get_param_name};
 use crate::fmt::pos_info::{pos_from_span, span_from_pos};
 
 fn xs_hints_expr(
@@ -26,14 +27,19 @@ fn xs_hints_expr(
             return;
         };
 
-        for ((param_name, _param_type), (arg_expr, arg_span)) in type_sign[..type_sign.len()-1].iter().zip(args) {
-            if let Expr::Identifier(arg_expr) = arg_expr {
-                if param_name.0.len() <= 1 ||  arg_expr.0.to_ascii_lowercase().contains(&param_name.0.to_ascii_lowercase()) {
+        for ((param_name, _param_type), arg) in type_sign[..type_sign.len()-1].iter().zip(args) {
+            if let (Some((arg_name, _type)), Some(param_name)) = (get_arg_name(arg, env, Some(Type::Void)), get_param_name(param_name)) {
+                // don't inlay low quality names like i, j, v1, v2, etc.
+                if param_name.len() < 3 {
+                    continue;
+                }
+                let di = dist(&param_name, &arg_name);
+                if di < 0.2 {
                     continue;
                 }
             }
 
-            let range = pos_from_span(src, arg_span);
+            let range = pos_from_span(src, &arg.1);
 
             hints.push(InlayHint {
                 position: range.0,

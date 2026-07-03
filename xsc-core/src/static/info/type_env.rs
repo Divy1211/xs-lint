@@ -77,7 +77,13 @@ impl TypeEnv {
             .and_then(|env| env.get_mut(id))
             .or_else(|| self.identifiers.get_mut(id))
     }
-    
+
+    pub fn get_ref(&self, id: &Identifier) -> Option<&IdInfo> {
+        self.current_fnv_env.as_ref()
+            .and_then(|env| env.get(id))
+            .or_else(|| self.identifiers.get(id))
+    }
+
     pub fn get(&self, id: &Identifier) -> Option<IdInfo> {
         self.current_fnv_env.as_ref()
             .and_then(|env| env.get(id))

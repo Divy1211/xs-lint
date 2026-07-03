@@ -476,7 +476,7 @@ match stmt {
             }
         };
 
-        let mut fn_info = FnInfo::new(SrcLoc::from(path, body_span));
+        let mut fn_info = FnInfo::new(name, SrcLoc::from(path, body_span));
         fn_info.set(Identifier::new("return"), IdInfo::dummy(Type::Void));
 
         let old_env = type_env.get_fn_env();
@@ -518,7 +518,7 @@ match stmt {
             ));
         }
 
-        let mut fn_info = FnInfo::new(SrcLoc::from(path, body_span));
+        let mut fn_info = FnInfo::new(name, SrcLoc::from(path, body_span));
         fn_info.set(Identifier::new("return"), IdInfo::dummy(return_type.clone()));
         
         let old_env = type_env.get_fn_env();
