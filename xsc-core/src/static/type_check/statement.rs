@@ -238,13 +238,11 @@ match stmt {
         }
 
         let Some(spanned_expr) = value else {
-            if *is_const {
-                type_env.add_err(path, XsError::syntax(
-                    name_span,
-                    "Variable declared as {0} must be initialised with a value",
-                    vec!["const"],
-                ));
-            }
+            type_env.add_err(path, XsError::syntax(
+                name_span,
+                "Variable declarations must be initialised with a value",
+                vec![],
+            ));
             return Ok(());
         };
 
