@@ -54,6 +54,14 @@ xs-check file.xs --ignores warning1,warning2
 
 The name used to ignore the warning is the same name that is printed in the first line of the warning. Ignoring the `DiscardedFn` warning may be useful at times
 
+### Exit status
+
+The CLI exits with status `0` when checking succeeds, including when only
+warnings are reported. File-reading, parsing, or type-checking errors produce
+status `1`, including errors in includes and an extra prelude. Help and version
+invocations also exit successfully. Invalid command-line arguments are handled
+by the argument parser and return a nonzero status.
+
 ## Cool Maths
 
 Note: GitHub does not render all the latex correctly, read these docs here: https://divy1211.github.io/xs-check/

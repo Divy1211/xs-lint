@@ -52,34 +52,33 @@ fn print_info() {
     println!("Compiled: {BUILD_DATE}");
 }
 
-pub fn parse_args() -> Option<(PathBuf, HashSet<u32>, Option<PathBuf>, Vec<PathBuf>)> {
+pub fn parse_args() -> Result<Option<(PathBuf, HashSet<u32>, Option<PathBuf>, Vec<PathBuf>)>, String> {
     let opt = Opt::from_args();
     if opt.version {
         print_info();
-        return None;
+        return Ok(None);
     }
     
     match opt.filepath {
         None => {
             Opt::clap().print_help().unwrap();
             println!();
-            None
+            Ok(None)
         }
         Some(rel_path) => {
             let filepath = match canonicalize(&rel_path) {
                 Ok(filepath) => { filepath }
                 Err(err) => {
-                    println!("Failed to open file '{}': {err}", rel_path.display());
-                    return None;
+                    return Err(format!("Failed to open file '{}': {err}", rel_path.display()));
                 }
             };
             
-            Some((
+            Ok(Some((
                 filepath,
                 opt.ignores.unwrap_or_else(HashSet::new),
                 opt.extra_prelude_path,
                 opt.include_dirs
-            ))
+            )))
         }
     }
 }

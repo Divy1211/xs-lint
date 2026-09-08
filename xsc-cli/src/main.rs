@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::process::ExitCode;
 
 use xsc_core::r#static::info::{gen_errs_from_path, gen_errs_from_src, AstCache, AstMap, Error, SrcCache, TypeEnv};
 
@@ -8,10 +9,14 @@ use crate::fmt::{print_parse_errs, print_xs_errs};
 mod cli;
 mod fmt;
 
-fn main() {
+fn main() -> ExitCode {
     let (filepath, ignores, extra_prelude_path, include_dirs) = match parse_args() {
-        Some(filepath) => { filepath }
-        None => { return; },
+        Ok(Some(filepath)) => { filepath }
+        Ok(None) => { return ExitCode::SUCCESS; },
+        Err(message) => {
+            eprintln!("{message}");
+            return ExitCode::FAILURE;
+        }
     };
     
     let mut type_env= TypeEnv::new(include_dirs);
@@ -31,6 +36,10 @@ fn main() {
     let new_errs = check_file(&filepath, &mut type_env, &mut ast_cache, &mut src_cache);
     has_errors =  has_errors || new_errs;
 
+    // Keep the existing diagnostic-summary behavior, but warnings alone must
+    // not make the command fail. File and parse errors are always fatal.
+    let mut has_fatal_errors = has_errors;
+
     for (filepath, errs) in type_env.errs() {
         if errs.is_empty() {
             continue;
@@ -43,6 +52,7 @@ fn main() {
         }
         let new_errs = print_xs_errs(filepath, errs, &ignores);
         has_errors = has_errors || new_errs;
+        has_fatal_errors = has_fatal_errors || errs.iter().any(|err| !err.is_warning());
     }
 
     if !has_errors {
@@ -52,6 +62,7 @@ fn main() {
         );
     }
     println!("Finished analysing file '{}'.", filepath.display());
+    if has_fatal_errors { ExitCode::FAILURE } else { ExitCode::SUCCESS }
 }
 
 fn check_file(filepath: &PathBuf, type_env: &mut TypeEnv, ast_cache: &mut AstCache, src_cache: &SrcCache) -> bool {
