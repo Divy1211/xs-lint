@@ -9,7 +9,7 @@ You may download and use the prebuilt binaries from [here](https://github.com/Di
 Or instead, if you have rust installed and prefer to build it from source, you can simply run:
 
 ```sh
-cargo install --git https://github.com/Divy1211/xs-check/xsc-cli
+cargo install --git https://github.com/Divy1211/xs-check xsc-cli
 ```
 
 This is recommended, as it will automatically add the binary to your system's path variable.
