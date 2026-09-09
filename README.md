@@ -54,6 +54,12 @@ xs-check file.xs --ignores warning1,warning2
 
 The name used to ignore the warning is the same name that is printed in the first line of the warning. Ignoring the `DiscardedFn` warning may be useful at times
 
+## Exit Codes
+
+0 - Successful run
+1 - Invalid Args/Input file not found
+2 - Linter errors found (note that warnings do not count as an error. You may use `--warnings-as-errors` if that is desired)
+
 ## Cool Maths
 
 Note: GitHub does not render all the latex correctly, read these docs here: https://divy1211.github.io/xs-check/

@@ -1,13 +1,33 @@
 use std::collections::HashSet;
 use std::fs;
+use std::ops::{BitOrAssign};
 use std::path::PathBuf;
 
-use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
+use ariadne::{Color, Config, Fmt, IndexType, Label, Report, ReportKind, Source};
 
 use crate::fmt::msg_fmt::msg_fmt;
 use xsc_core::r#static::info::{ParseError, XsError};
 
-pub fn print_xs_errs(path: &PathBuf, errs: &Vec<XsError>, ignores: &HashSet<u32>) -> bool {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorsPresent {
+    None,
+    OnlyWarnings,
+    HasErrors,
+}
+
+impl BitOrAssign<ErrorsPresent> for ErrorsPresent {
+    fn bitor_assign(&mut self, rhs: ErrorsPresent) {
+        match (*self, rhs) {
+            (ErrorsPresent::None, other)
+            | (other, ErrorsPresent::None) => { *self = other },
+            (ErrorsPresent::OnlyWarnings, ErrorsPresent::HasErrors)
+            | (ErrorsPresent::HasErrors, ErrorsPresent::OnlyWarnings) => { *self = ErrorsPresent::HasErrors }
+            _ => {},
+        }
+    }
+}
+
+pub fn print_xs_errs(path: &PathBuf, errs: &Vec<XsError>, ignores: &HashSet<u32>) -> ErrorsPresent {
     let filename = &path.display().to_string();
     let src = &fs::read_to_string(&path).expect("Infallible: If we are here, the file was read previously");
     
@@ -16,13 +36,14 @@ pub fn print_xs_errs(path: &PathBuf, errs: &Vec<XsError>, ignores: &HashSet<u32>
     let names = Color::Fixed(13);
     let types = Color::Fixed(14);
 
-    let mut found_errs = false;
+    let mut found_errs = ErrorsPresent::None;
     for error in errs.iter() {
         if ignores.contains(&error.code()) || error.is_ignored() {
             continue;
         }
-        found_errs = true;
+        found_errs |= if !error.is_warning() { ErrorsPresent::HasErrors } else { ErrorsPresent::OnlyWarnings };
         let report = Report::build(error.report_kind(), filename, error.span().start)
+            .with_config(Config::default().with_index_type(IndexType::Byte))
             .with_code(error.code())
             .with_message(error.kind());
         let report = match error {
@@ -139,6 +160,7 @@ pub fn print_parse_errs(path: &PathBuf, errs: &Vec<ParseError>) {
         let (span, msg) = (error.span(), error.msg());
         
         Report::build(ReportKind::Error, filename, span.start)
+            .with_config(Config::default().with_index_type(IndexType::Byte))
             .with_message(kind)
             .with_label(
                 Label::new((filename, span.start..span.end))

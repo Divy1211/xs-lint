@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::process::ExitCode;
 use dunce::canonicalize;
 use xsc_core::utils::warnings_from_str;
 
@@ -21,6 +22,9 @@ struct Opt {
         parse(try_from_str = warnings_from_str)
     )]
     ignores: Option<HashSet<u32>>,
+
+    #[structopt(short, long, help = "Treat warnings as errors (A non zero exit code is produced when errors are encountered)")]
+    warnings_are_errors: bool,
 
     #[structopt(
         short,
@@ -52,33 +56,34 @@ fn print_info() {
     println!("Compiled: {BUILD_DATE}");
 }
 
-pub fn parse_args() -> Option<(PathBuf, HashSet<u32>, Option<PathBuf>, Vec<PathBuf>)> {
+pub fn parse_args() -> Result<(PathBuf, HashSet<u32>, Option<PathBuf>, Vec<PathBuf>, bool), ExitCode> {
     let opt = Opt::from_args();
     if opt.version {
         print_info();
-        return None;
+        return Err(ExitCode::SUCCESS);
     }
     
     match opt.filepath {
         None => {
             Opt::clap().print_help().unwrap();
             println!();
-            None
+            Err(ExitCode::FAILURE)
         }
         Some(rel_path) => {
             let filepath = match canonicalize(&rel_path) {
                 Ok(filepath) => { filepath }
                 Err(err) => {
                     println!("Failed to open file '{}': {err}", rel_path.display());
-                    return None;
+                    return Err(ExitCode::FAILURE);
                 }
             };
             
-            Some((
+            Ok((
                 filepath,
                 opt.ignores.unwrap_or_else(HashSet::new),
                 opt.extra_prelude_path,
-                opt.include_dirs
+                opt.include_dirs,
+                opt.warnings_are_errors,
             ))
         }
     }
